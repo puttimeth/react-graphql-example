@@ -1,70 +1,89 @@
-# Getting Started with Create React App
+# React-GraphQL example project
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+![image](https://user-images.githubusercontent.com/32786620/179411439-f4c1bd59-764c-42f5-8b34-551a12a3ecbf.png)
 
-## Available Scripts
+## Description
+This repo is the example for those who struggle to use React as frontend combined with GraphQL. This project design to work with [this repo as backend](https://github.com/puttimeth/nestjs-graphql-mongodb-example).
 
-In the project directory, you can run:
+## Installation
+```bash
+yarn install
+```
 
-### `npm start`
+## Running
+```bash
+yarn start
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Structure
+The application contains 3 pages, `User`, `Pet` and `Post`. Each represent the collection in the database.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## GraphQL
+I chose to use [Apollo Client](https://www.apollographql.com/docs/react/) as medium to send GraphQL request. I recommend to learn from the official document because most of the content come from them.
 
-### `npm test`
+The query is declared like this. 
+```ts
+const GET_USERS = gql`
+  query {
+    user {
+      _id
+      firstName
+      lastName
+      pets {
+        name
+      }
+      phoneNumber
+    }
+  }
+  `;
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+If you want to apply some condition, you can edit it like this. This query will get only the user that `firstName` is `jelly`.
+```ts
+const GET_USERS = gql`
+  query {
+    user(GetUserDto: { firstName: "jelly" }) {
+      _id
+      firstName
+      lastName
+      pets {
+        name
+      }
+      phoneNumber
+    }
+  }
+`;
+```
 
-### `npm run build`
+Then, call the request by using `useQuery` hooks.
+```ts
+const { loading, error, data, startPolling } = useQuery(GET_USERS);
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+I want to let them auto poll but this function seem to have a bug. I cannot declare the config like this. It won't work.
+```ts
+const { loading, error, data, startPolling } = useQuery(GET_USERS, { pollInterval: 5000 });
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Instead I use `useEffect` hook.
+```ts
+useEffect(() => {
+  startPolling(5000);
+}, []);
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+When use `data`, don't forget to access its child according to the query name. In this case, I have to access `user` before use.
+```ts
+{data.user.map(({ _id, firstName, lastName, phoneNumber, pets }) => (
+  <li key={_id}>
+    {firstName} {lastName} {phoneNumber}
+    {pets.length > 0 && (
+      <ul>
+        {pets.map(({ name }) => (
+          <li key={`${_id}-${name}`}>{name}</li>
+        ))}
+      </ul>
+    )}
+  </li>
+))}
+```
